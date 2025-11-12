@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"log"
 	"os"
 
+	"google.golang.org/adk/agent"
 	"google.golang.org/adk/agent/llmagent"
 	"google.golang.org/adk/agent/remoteagent"
 	"google.golang.org/adk/cmd/launcher/adk"
@@ -12,69 +14,76 @@ import (
 	"google.golang.org/adk/model/gemini"
 	"google.golang.org/adk/server/restapi/services"
 	"google.golang.org/adk/tool"
-	"google.golang.org/adk/tool/geminitool"
 	"google.golang.org/genai"
 )
+
+func newWeatherAgent() (agent.Agent, error) {
+	remoteAgent, err := remoteagent.New(remoteagent.A2AConfig{
+		Name:            "weather_agent",
+		Description:     "Agent that checks current weather in a given city.",
+		AgentCardSource: "http://localhost:8001",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create remote weather agent: %w", err)
+	}
+	return remoteAgent, nil
+}
+
+func newTimeAgent() (agent.Agent, error) {
+	remoteAgent, err := remoteagent.New(remoteagent.A2AConfig{
+		Name:            "time_agent",
+		Description:     "Agent that checks current time in a given city.",
+		AgentCardSource: "http://localhost:8002",
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to create remote time agent: %w", err)
+	}
+	return remoteAgent, nil
+}
+
+func newRootAgent(ctx context.Context, weatherAgent, timeAgent agent.Agent) (agent.Agent, error) {
+	model, err := gemini.NewModel(ctx, "gemini-2.5-flash", &genai.ClientConfig{})
+	if err != nil {
+		return nil, err
+	}
+	return llmagent.New(llmagent.Config{
+		Name:        "root_agent",
+		Model:       model,
+		Description: "Agent to answer questions about the time and weather in a city.",
+		Instruction: "I can answer your questions about the time and weather in a city.",
+		SubAgents:   []agent.Agent{weatherAgent, timeAgent},
+		Tools:       []tool.Tool{},
+	})
+}
 
 func main() {
 	ctx := context.Background()
 
-	// init root agent
-	model, err := gemini.NewModel(ctx, "gemini-2.5-flash", &genai.ClientConfig{
-		APIKey: os.Getenv("GOOGLE_API_KEY"),
-	})
-	if err != nil {
-		log.Fatalf("Failed to create model: %v", err)
-	}
-
-	rootAgent, err := llmagent.New(llmagent.Config{
-		Name:        "weather_time_agent",
-		Model:       model,
-		Description: "Agent to answer questions about the time and weather in a city.",
-		Instruction: "I can answer your questions about the time and weather in a city.",
-		Tools: []tool.Tool{
-			geminitool.GoogleSearch{},
-		},
-	})
-	if err != nil {
-		log.Fatalf("Failed to create agent: %v", err)
-	}
-
 	// init remote agents
-	weatherServerAddress := startWeatherAgentServer()
-	weatherAgent, err := remoteagent.New(remoteagent.A2AConfig{
-		Name:            "A2A Weather Agent",
-		AgentCardSource: weatherServerAddress,
-	})
+	weatherAgent, err := newWeatherAgent()
 	if err != nil {
-		log.Fatalf("Failed to create a weather agent: %v", err)
+		log.Fatalf("Failed to create weather agent: %v", err)
 	}
 
-	timeServerAddress := startTimeAgentServer()
-	timeAgent, err := remoteagent.New(remoteagent.A2AConfig{
-		Name:            "A2A Time Agent",
-		AgentCardSource: timeServerAddress,
-	})
+	timeAgent, err := newTimeAgent()
 	if err != nil {
-		log.Fatalf("Failed to create a weather agent: %v", err)
+		log.Fatalf("Failed to create time agent: %v", err)
+	}
+
+	// init root agent
+	rootAgent, err := newRootAgent(ctx, weatherAgent, timeAgent)
+	if err != nil {
+		log.Fatalf("Failed to create root agent: %v", err)
 	}
 
 	// start server
-	agentLoader, err := services.NewMultiAgentLoader(
-		rootAgent,
-		weatherAgent,
-		timeAgent,
-	)
-	if err != nil {
-		log.Fatalf("Failed to create agent loader: %v", err)
-	}
-
 	config := &adk.Config{
-		AgentLoader: agentLoader,
+		AgentLoader: services.NewSingleAgentLoader(rootAgent),
 	}
 
 	l := full.NewLauncher()
-	if err = l.Execute(ctx, config, os.Args[1:]); err != nil {
-		log.Fatalf("Run failed: %v\n\n%s", err, l.CommandLineSyntax())
+	err = l.Execute(ctx, config, os.Args[1:])
+	if err != nil {
+		log.Fatalf("run failed: %v\n\n%s", err, l.CommandLineSyntax())
 	}
 }

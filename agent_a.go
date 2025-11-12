@@ -4,19 +4,17 @@ import (
 	"context"
 	"fmt"
 	"log"
-	"net"
-	"net/http"
-	"net/url"
 	"os"
+	"strconv"
 
-	"github.com/a2aproject/a2a-go/a2a"
-	"github.com/a2aproject/a2a-go/a2asrv"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/agent/llmagent"
+	"google.golang.org/adk/cmd/launcher/adk"
+	"google.golang.org/adk/cmd/launcher/web"
+	"google.golang.org/adk/cmd/launcher/web/a2a"
 	"google.golang.org/adk/model/gemini"
-	"google.golang.org/adk/runner"
-	"google.golang.org/adk/server/adka2a"
+	"google.golang.org/adk/server/restapi/services"
 	"google.golang.org/adk/session"
 	"google.golang.org/adk/tool"
 	"google.golang.org/adk/tool/mcptoolset"
@@ -51,7 +49,7 @@ func localMCPTransport(ctx context.Context) mcp.Transport {
 	return clientTransport
 }
 
-func newWeatherAgent(ctx context.Context) agent.Agent {
+func WeatherAgent(ctx context.Context) agent.Agent {
 	// init model
 	model, err := gemini.NewModel(ctx, "gemini-2.5-flash", &genai.ClientConfig{
 		APIKey: os.Getenv("GOOGLE_API_KEY"),
@@ -87,46 +85,26 @@ func newWeatherAgent(ctx context.Context) agent.Agent {
 	return agent
 }
 
-func startWeatherAgentServer() string {
-	listener, err := net.Listen("tcp", "127.0.0.1:0")
+func main() {
+	ctx := context.Background()
+
+	port := 8001
+	launcher := web.NewLauncher(a2a.NewLauncher())
+	_, err := launcher.Parse([]string{
+		"--port", strconv.Itoa(port),
+		"a2a", "--a2a_agent_url", "http://localhost:" + strconv.Itoa(port),
+	})
 	if err != nil {
-		log.Fatalf("Failed to bind to a port: %v", err)
+		log.Fatalf("launcher.Parse() error = %v", err)
 	}
 
-	baseURL := &url.URL{Scheme: "http", Host: listener.Addr().String()}
+	config := &adk.Config{
+		AgentLoader:    services.NewSingleAgentLoader(WeatherAgent(ctx)),
+		SessionService: session.InMemoryService(),
+	}
 
-	log.Printf("Starting A2A server on %s", baseURL.String())
-
-	go func() {
-		ctx := context.Background()
-		agent := newWeatherAgent(ctx)
-
-		agentPath := "/invoke"
-		agentCard := &a2a.AgentCard{
-			Name:               agent.Name(),
-			Skills:             adka2a.BuildAgentSkills(agent),
-			PreferredTransport: a2a.TransportProtocolJSONRPC,
-			URL:                baseURL.JoinPath(agentPath).String(),
-			Capabilities:       a2a.AgentCapabilities{Streaming: true},
-		}
-
-		mux := http.NewServeMux()
-		mux.Handle(a2asrv.WellKnownAgentCardPath, a2asrv.NewStaticAgentCardHandler(agentCard))
-
-		executor := adka2a.NewExecutor(adka2a.ExecutorConfig{
-			RunnerConfig: runner.Config{
-				AppName:        agent.Name(),
-				Agent:          agent,
-				SessionService: session.InMemoryService(),
-			},
-		})
-		requestHandler := a2asrv.NewHandler(executor)
-		mux.Handle(agentPath, a2asrv.NewJSONRPCHandler(requestHandler))
-
-		err := http.Serve(listener, mux)
-
-		log.Printf("A2A server stopped: %v", err)
-	}()
-
-	return baseURL.String()
+	log.Printf("Starting A2A prime checker server on port %d\n", port)
+	if err := launcher.Run(context.Background(), config); err != nil {
+		log.Fatalf("launcher.Run() error = %v", err)
+	}
 }
