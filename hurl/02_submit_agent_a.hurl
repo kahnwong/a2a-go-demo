@@ -7,7 +7,7 @@ Content-Type: application/json
     "newMessage": {
         "role": "user",
         "parts": [{
-            "text": "Hey whats the current weather and time in new york today"
+            "text": "Hey whats the current weather in new york today"
         }]
     }
 }
