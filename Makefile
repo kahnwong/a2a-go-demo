@@ -1,5 +1,4 @@
-# standalone
-start-agent-a:
+start:
 	go run . web api
-submit-agent-a:
-	./scripts/submit-agent-a.sh
+submit:
+	./scripts/submit.sh

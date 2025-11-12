@@ -23,26 +23,26 @@ import (
 	"google.golang.org/genai"
 )
 
-type Input struct {
+type TimeInput struct {
 	City string `json:"city" jsonschema:"city name"`
 }
 
-type Output struct {
-	WeatherSummary string `json:"weather_summary" jsonschema:"weather summary in the given city"`
+type TimeOutput struct {
+	TimeSummary string `json:"time_summary" jsonschema:"time summary in the given city"`
 }
 
-func GetWeather(ctx context.Context, req *mcp.CallToolRequest, input Input) (*mcp.CallToolResult, Output, error) {
-	return nil, Output{
-		WeatherSummary: fmt.Sprintf("Today in %q is sunny\n", input.City),
+func GetTime(ctx context.Context, req *mcp.CallToolRequest, input TimeInput) (*mcp.CallToolResult, TimeOutput, error) {
+	return nil, TimeOutput{
+		TimeSummary: fmt.Sprintf("Current time in %q is 5:00 AM\n", input.City),
 	}, nil
 }
 
-func localMCPTransport(ctx context.Context) mcp.Transport {
+func localAgentBMCPTransport(ctx context.Context) mcp.Transport {
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
 	// Run in-memory MCP server.
-	server := mcp.NewServer(&mcp.Implementation{Name: "weather_server", Version: "v1.0.0"}, nil)
-	mcp.AddTool(server, &mcp.Tool{Name: "get_weather", Description: "returns weather in the given city"}, GetWeather)
+	server := mcp.NewServer(&mcp.Implementation{Name: "time_server", Version: "v1.0.0"}, nil)
+	mcp.AddTool(server, &mcp.Tool{Name: "get_Time", Description: "returns time in the given city"}, GetTime)
 	_, err := server.Connect(ctx, serverTransport, nil)
 	if err != nil {
 		log.Fatal(err)
@@ -51,7 +51,7 @@ func localMCPTransport(ctx context.Context) mcp.Transport {
 	return clientTransport
 }
 
-func newWeatherAgent(ctx context.Context) agent.Agent {
+func newTimeAgent(ctx context.Context) agent.Agent {
 	// init model
 	model, err := gemini.NewModel(ctx, "gemini-2.5-flash", &genai.ClientConfig{
 		APIKey: os.Getenv("GOOGLE_API_KEY"),
@@ -61,7 +61,7 @@ func newWeatherAgent(ctx context.Context) agent.Agent {
 	}
 
 	// init tools
-	transport := localMCPTransport(ctx)
+	transport := localAgentBMCPTransport(ctx)
 
 	mcpToolSet, err := mcptoolset.New(mcptoolset.Config{
 		Transport: transport,
@@ -72,9 +72,9 @@ func newWeatherAgent(ctx context.Context) agent.Agent {
 
 	// init agent
 	agent, err := llmagent.New(llmagent.Config{
-		Name:        "agent_a",
+		Name:        "agent_b",
 		Model:       model,
-		Description: "Agent to answer questions about the weather in a city.",
+		Description: "Agent to answer questions about the time in a city/",
 		Instruction: "You are a helpful assistant that helps users with various tasks.",
 		Toolsets: []tool.Toolset{
 			mcpToolSet,
@@ -87,7 +87,7 @@ func newWeatherAgent(ctx context.Context) agent.Agent {
 	return agent
 }
 
-func startWeatherAgentServer() string {
+func startTimeAgentServer() string {
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		log.Fatalf("Failed to bind to a port: %v", err)
@@ -99,7 +99,7 @@ func startWeatherAgentServer() string {
 
 	go func() {
 		ctx := context.Background()
-		agent := newWeatherAgent(ctx)
+		agent := newTimeAgent(ctx)
 
 		agentPath := "/invoke"
 		agentCard := &a2a.AgentCard{
