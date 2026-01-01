@@ -5,7 +5,7 @@ go 1.25.4
 require (
 	github.com/modelcontextprotocol/go-sdk v0.8.0
 	github.com/spf13/cobra v1.10.2
-	google.golang.org/adk v0.1.0
+	google.golang.org/adk v0.3.0
 	google.golang.org/genai v1.40.0
 )
 
