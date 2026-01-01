@@ -1,14 +1,14 @@
-package main
+package cmd
 
 import (
 	"context"
 	"fmt"
 	"log"
 	"os"
-
 	"strconv"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/spf13/cobra"
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/agent/llmagent"
 	"google.golang.org/adk/cmd/launcher/adk"
@@ -39,7 +39,6 @@ func GetTime(ctx context.Context, req *mcp.CallToolRequest, input TimeInput) (*m
 func localAgentBMCPTransport(ctx context.Context) mcp.Transport {
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
-	// Run in-memory MCP server.
 	server := mcp.NewServer(&mcp.Implementation{Name: "time_server", Version: "v1.0.0"}, nil)
 	mcp.AddTool(server, &mcp.Tool{Name: "get_Time", Description: "returns time in the given city"}, GetTime)
 	_, err := server.Connect(ctx, serverTransport, nil)
@@ -51,7 +50,6 @@ func localAgentBMCPTransport(ctx context.Context) mcp.Transport {
 }
 
 func TimeAgent(ctx context.Context) agent.Agent {
-	// init model
 	model, err := gemini.NewModel(ctx, "gemini-2.5-flash", &genai.ClientConfig{
 		APIKey: os.Getenv("GOOGLE_API_KEY"),
 	})
@@ -59,7 +57,6 @@ func TimeAgent(ctx context.Context) agent.Agent {
 		log.Fatalf("Failed to create a model: %v", err)
 	}
 
-	// init tools
 	transport := localAgentBMCPTransport(ctx)
 
 	mcpToolSet, err := mcptoolset.New(mcptoolset.Config{
@@ -69,7 +66,6 @@ func TimeAgent(ctx context.Context) agent.Agent {
 		log.Fatalf("Failed to create MCP tool set: %v", err)
 	}
 
-	// init agent
 	agent, err := llmagent.New(llmagent.Config{
 		Name:        "agent_b",
 		Model:       model,
@@ -86,26 +82,35 @@ func TimeAgent(ctx context.Context) agent.Agent {
 	return agent
 }
 
-func main() {
-	ctx := context.Background()
+var agentBCmd = &cobra.Command{
+	Use:   "agent-b",
+	Short: "Start agent B (time agent)",
+	Long:  `Starts the time agent on port 8002`,
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
 
-	port := 8002
-	launcher := web.NewLauncher(a2a.NewLauncher())
-	_, err := launcher.Parse([]string{
-		"--port", strconv.Itoa(port),
-		"a2a", "--a2a_agent_url", "http://localhost:" + strconv.Itoa(port),
-	})
-	if err != nil {
-		log.Fatalf("launcher.Parse() error = %v", err)
-	}
+		port := 8002
+		launcher := web.NewLauncher(a2a.NewLauncher())
+		_, err := launcher.Parse([]string{
+			"--port", strconv.Itoa(port),
+			"a2a", "--a2a_agent_url", "http://localhost:" + strconv.Itoa(port),
+		})
+		if err != nil {
+			log.Fatalf("launcher.Parse() error = %v", err)
+		}
 
-	config := &adk.Config{
-		AgentLoader:    services.NewSingleAgentLoader(TimeAgent(ctx)),
-		SessionService: session.InMemoryService(),
-	}
+		config := &adk.Config{
+			AgentLoader:    services.NewSingleAgentLoader(TimeAgent(ctx)),
+			SessionService: session.InMemoryService(),
+		}
 
-	log.Printf("Starting A2A prime checker server on port %d\n", port)
-	if err := launcher.Run(context.Background(), config); err != nil {
-		log.Fatalf("launcher.Run() error = %v", err)
-	}
+		log.Printf("Starting A2A time agent server on port %d\n", port)
+		if err := launcher.Run(context.Background(), config); err != nil {
+			log.Fatalf("launcher.Run() error = %v", err)
+		}
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(agentBCmd)
 }

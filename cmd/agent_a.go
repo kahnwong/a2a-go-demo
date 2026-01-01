@@ -1,4 +1,4 @@
-package main
+package cmd
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"strconv"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/spf13/cobra"
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/agent/llmagent"
 	"google.golang.org/adk/cmd/launcher/adk"
@@ -38,7 +39,6 @@ func GetWeather(ctx context.Context, req *mcp.CallToolRequest, input Input) (*mc
 func localMCPTransport(ctx context.Context) mcp.Transport {
 	clientTransport, serverTransport := mcp.NewInMemoryTransports()
 
-	// Run in-memory MCP server.
 	server := mcp.NewServer(&mcp.Implementation{Name: "weather_server", Version: "v1.0.0"}, nil)
 	mcp.AddTool(server, &mcp.Tool{Name: "get_weather", Description: "returns weather in the given city"}, GetWeather)
 	_, err := server.Connect(ctx, serverTransport, nil)
@@ -50,7 +50,6 @@ func localMCPTransport(ctx context.Context) mcp.Transport {
 }
 
 func WeatherAgent(ctx context.Context) agent.Agent {
-	// init model
 	model, err := gemini.NewModel(ctx, "gemini-2.5-flash", &genai.ClientConfig{
 		APIKey: os.Getenv("GOOGLE_API_KEY"),
 	})
@@ -58,7 +57,6 @@ func WeatherAgent(ctx context.Context) agent.Agent {
 		log.Fatalf("Failed to create a model: %v", err)
 	}
 
-	// init tools
 	transport := localMCPTransport(ctx)
 
 	mcpToolSet, err := mcptoolset.New(mcptoolset.Config{
@@ -68,7 +66,6 @@ func WeatherAgent(ctx context.Context) agent.Agent {
 		log.Fatalf("Failed to create MCP tool set: %v", err)
 	}
 
-	// init agent
 	agent, err := llmagent.New(llmagent.Config{
 		Name:        "agent_a",
 		Model:       model,
@@ -85,26 +82,35 @@ func WeatherAgent(ctx context.Context) agent.Agent {
 	return agent
 }
 
-func main() {
-	ctx := context.Background()
+var agentACmd = &cobra.Command{
+	Use:   "agent-a",
+	Short: "Start agent A (weather agent)",
+	Long:  `Starts the weather agent on port 8001`,
+	Run: func(cmd *cobra.Command, args []string) {
+		ctx := context.Background()
 
-	port := 8001
-	launcher := web.NewLauncher(a2a.NewLauncher())
-	_, err := launcher.Parse([]string{
-		"--port", strconv.Itoa(port),
-		"a2a", "--a2a_agent_url", "http://localhost:" + strconv.Itoa(port),
-	})
-	if err != nil {
-		log.Fatalf("launcher.Parse() error = %v", err)
-	}
+		port := 8001
+		launcher := web.NewLauncher(a2a.NewLauncher())
+		_, err := launcher.Parse([]string{
+			"--port", strconv.Itoa(port),
+			"a2a", "--a2a_agent_url", "http://localhost:" + strconv.Itoa(port),
+		})
+		if err != nil {
+			log.Fatalf("launcher.Parse() error = %v", err)
+		}
 
-	config := &adk.Config{
-		AgentLoader:    services.NewSingleAgentLoader(WeatherAgent(ctx)),
-		SessionService: session.InMemoryService(),
-	}
+		config := &adk.Config{
+			AgentLoader:    services.NewSingleAgentLoader(WeatherAgent(ctx)),
+			SessionService: session.InMemoryService(),
+		}
 
-	log.Printf("Starting A2A prime checker server on port %d\n", port)
-	if err := launcher.Run(context.Background(), config); err != nil {
-		log.Fatalf("launcher.Run() error = %v", err)
-	}
+		log.Printf("Starting A2A weather agent server on port %d\n", port)
+		if err := launcher.Run(context.Background(), config); err != nil {
+			log.Fatalf("launcher.Run() error = %v", err)
+		}
+	},
+}
+
+func init() {
+	rootCmd.AddCommand(agentACmd)
 }
