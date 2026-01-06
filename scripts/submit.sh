@@ -7,4 +7,4 @@ hurl hurl/01_init_session.hurl
 
 hurl hurl/02_submit.hurl >response.json
 echo ""
-jq '.[-1].content.parts[0].text' response.json
+cat response.json | jq | grep text

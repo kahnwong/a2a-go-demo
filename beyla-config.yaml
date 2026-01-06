@@ -1,0 +1,8 @@
+discovery:
+  instrument:
+    - name: "a2a-go-demo"
+      open_ports: 8001, 8002, 8080
+otel_traces_export:
+  endpoint: http://localhost:4317
+otel_metrics_export:
+  endpoint: http://localhost:4317

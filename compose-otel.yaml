@@ -1,0 +1,10 @@
+services:
+  otel-lgtm:
+    image: grafana/otel-lgtm
+    container_name: otel-lgtm
+    ports:
+      - 3000:3000 # grafana
+      - 4040:4040 # otel ui
+      - 4317:4317 # otel grpc
+      - 4318:4318 # otel http
+      - 9090:9090 # prometheus
