@@ -3,10 +3,10 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log"
 	"os"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/agent/llmagent"
@@ -37,7 +37,7 @@ func localMCPTransport(ctx context.Context) mcp.Transport {
 	mcp.AddTool(server, &mcp.Tool{Name: "get_weather", Description: "returns weather in the given city"}, GetWeather)
 	_, err := server.Connect(ctx, serverTransport, nil)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal().Err(err).Msg("Failed to connect MCP server")
 	}
 
 	return clientTransport
@@ -48,7 +48,7 @@ func WeatherAgent(ctx context.Context) agent.Agent {
 		APIKey: os.Getenv("GOOGLE_API_KEY"),
 	})
 	if err != nil {
-		log.Fatalf("Failed to create a model: %v", err)
+		log.Fatal().Err(err).Msg("Failed to create model")
 	}
 
 	transport := localMCPTransport(ctx)
@@ -57,7 +57,7 @@ func WeatherAgent(ctx context.Context) agent.Agent {
 		Transport: transport,
 	})
 	if err != nil {
-		log.Fatalf("Failed to create MCP tool set: %v", err)
+		log.Fatal().Err(err).Msg("Failed to create MCP tool set")
 	}
 
 	agent, err := llmagent.New(llmagent.Config{
@@ -70,7 +70,7 @@ func WeatherAgent(ctx context.Context) agent.Agent {
 		},
 	})
 	if err != nil {
-		log.Fatalf("Failed to create agent: %v", err)
+		log.Fatal().Err(err).Msg("Failed to create agent")
 	}
 
 	return agent

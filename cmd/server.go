@@ -2,9 +2,9 @@ package cmd
 
 import (
 	"context"
-	"log"
 	"strconv"
 
+	"github.com/rs/zerolog/log"
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/cmd/launcher"
 	"google.golang.org/adk/cmd/launcher/web"
@@ -19,7 +19,7 @@ func startA2AServer(ctx context.Context, port int, agentInstance agent.Agent, se
 		"a2a", "--a2a_agent_url", "http://localhost:" + strconv.Itoa(port),
 	})
 	if err != nil {
-		log.Fatalf("launcher.Parse() error = %v", err)
+		log.Fatal().Err(err).Msg("launcher.Parse() failed")
 	}
 
 	config := &launcher.Config{
@@ -27,8 +27,8 @@ func startA2AServer(ctx context.Context, port int, agentInstance agent.Agent, se
 		SessionService: session.InMemoryService(),
 	}
 
-	log.Printf("Starting A2A %s server on port %d\n", serverName, port)
+	log.Info().Str("server", serverName).Int("port", port).Msg("Starting A2A server")
 	if err := webLauncher.Run(ctx, config); err != nil {
-		log.Fatalf("webLauncher.Run() error = %v", err)
+		log.Fatal().Err(err).Msg("webLauncher.Run() failed")
 	}
 }

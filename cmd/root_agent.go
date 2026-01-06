@@ -3,8 +3,8 @@ package cmd
 import (
 	"context"
 	"fmt"
-	"log"
 
+	"github.com/rs/zerolog/log"
 	"github.com/spf13/cobra"
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/agent/llmagent"
@@ -64,17 +64,17 @@ var rootAgentCmd = &cobra.Command{
 
 		weatherAgent, err := newWeatherAgent()
 		if err != nil {
-			log.Fatalf("Failed to create weather agent: %v", err)
+			log.Fatal().Err(err).Msg("Failed to create weather agent")
 		}
 
 		timeAgent, err := newTimeAgent()
 		if err != nil {
-			log.Fatalf("Failed to create time agent: %v", err)
+			log.Fatal().Err(err).Msg("Failed to create time agent")
 		}
 
 		rootAgent, err := newRootAgent(ctx, weatherAgent, timeAgent)
 		if err != nil {
-			log.Fatalf("Failed to create root agent: %v", err)
+			log.Fatal().Err(err).Msg("Failed to create root agent")
 		}
 
 		config := &launcher.Config{
@@ -88,7 +88,7 @@ var rootAgentCmd = &cobra.Command{
 		}
 		err = l.Execute(ctx, config, launchArgs)
 		if err != nil {
-			log.Fatalf("run failed: %v\n\n%s", err, l.CommandLineSyntax())
+			log.Fatal().Err(err).Str("syntax", l.CommandLineSyntax()).Msg("Run failed")
 		}
 	},
 }
