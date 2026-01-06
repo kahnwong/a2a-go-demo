@@ -9,16 +9,15 @@ import (
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/agent/llmagent"
 	"google.golang.org/adk/agent/remoteagent"
-	"google.golang.org/adk/cmd/launcher/adk"
+	"google.golang.org/adk/cmd/launcher"
 	"google.golang.org/adk/cmd/launcher/full"
 	"google.golang.org/adk/model/gemini"
-	"google.golang.org/adk/server/restapi/services"
 	"google.golang.org/adk/tool"
 	"google.golang.org/genai"
 )
 
 func newWeatherAgent() (agent.Agent, error) {
-	remoteAgent, err := remoteagent.New(remoteagent.A2AConfig{
+	remoteAgent, err := remoteagent.NewA2A(remoteagent.A2AConfig{
 		Name:            "weather_agent",
 		Description:     "Agent that checks current weather in a given city.",
 		AgentCardSource: "http://localhost:8001",
@@ -30,7 +29,7 @@ func newWeatherAgent() (agent.Agent, error) {
 }
 
 func newTimeAgent() (agent.Agent, error) {
-	remoteAgent, err := remoteagent.New(remoteagent.A2AConfig{
+	remoteAgent, err := remoteagent.NewA2A(remoteagent.A2AConfig{
 		Name:            "time_agent",
 		Description:     "Agent that checks current time in a given city.",
 		AgentCardSource: "http://localhost:8002",
@@ -78,8 +77,8 @@ var rootAgentCmd = &cobra.Command{
 			log.Fatalf("Failed to create root agent: %v", err)
 		}
 
-		config := &adk.Config{
-			AgentLoader: services.NewSingleAgentLoader(rootAgent),
+		config := &launcher.Config{
+			AgentLoader: agent.NewSingleLoader(rootAgent),
 		}
 
 		l := full.NewLauncher()

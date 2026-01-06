@@ -11,11 +11,10 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/adk/agent"
 	"google.golang.org/adk/agent/llmagent"
-	"google.golang.org/adk/cmd/launcher/adk"
+	"google.golang.org/adk/cmd/launcher"
 	"google.golang.org/adk/cmd/launcher/web"
 	"google.golang.org/adk/cmd/launcher/web/a2a"
 	"google.golang.org/adk/model/gemini"
-	"google.golang.org/adk/server/restapi/services"
 	"google.golang.org/adk/session"
 	"google.golang.org/adk/tool"
 	"google.golang.org/adk/tool/mcptoolset"
@@ -90,8 +89,8 @@ var agentBCmd = &cobra.Command{
 		ctx := context.Background()
 
 		port := 8002
-		launcher := web.NewLauncher(a2a.NewLauncher())
-		_, err := launcher.Parse([]string{
+		webLauncher := web.NewLauncher(a2a.NewLauncher())
+		_, err := webLauncher.Parse([]string{
 			"--port", strconv.Itoa(port),
 			"a2a", "--a2a_agent_url", "http://localhost:" + strconv.Itoa(port),
 		})
@@ -99,14 +98,14 @@ var agentBCmd = &cobra.Command{
 			log.Fatalf("launcher.Parse() error = %v", err)
 		}
 
-		config := &adk.Config{
-			AgentLoader:    services.NewSingleAgentLoader(TimeAgent(ctx)),
+		config := &launcher.Config{
+			AgentLoader:    agent.NewSingleLoader(TimeAgent(ctx)),
 			SessionService: session.InMemoryService(),
 		}
 
 		log.Printf("Starting A2A time agent server on port %d\n", port)
-		if err := launcher.Run(context.Background(), config); err != nil {
-			log.Fatalf("launcher.Run() error = %v", err)
+		if err := webLauncher.Run(context.Background(), config); err != nil {
+			log.Fatalf("webLauncher.Run() error = %v", err)
 		}
 	},
 }
