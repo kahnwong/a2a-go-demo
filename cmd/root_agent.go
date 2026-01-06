@@ -45,6 +45,7 @@ func newRootAgent(ctx context.Context, weatherAgent, timeAgent agent.Agent) (age
 	if err != nil {
 		return nil, err
 	}
+
 	return llmagent.New(llmagent.Config{
 		Name:        "root_agent",
 		Model:       model,
@@ -61,6 +62,16 @@ var rootAgentCmd = &cobra.Command{
 	Long:  `Starts the root agent that coordinates weather and time agents`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
+
+		tp, err := initTracer(ctx)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to initialize tracer")
+		}
+		defer func() {
+			if err := tp.Shutdown(ctx); err != nil {
+				log.Error().Err(err).Msg("Failed to shutdown tracer")
+			}
+		}()
 
 		weatherAgent, err := newWeatherAgent()
 		if err != nil {

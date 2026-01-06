@@ -82,6 +82,17 @@ var agentBCmd = &cobra.Command{
 	Long:  `Starts the time agent on port 8002`,
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
+
+		tp, err := initTracer(ctx)
+		if err != nil {
+			log.Fatal().Err(err).Msg("Failed to initialize tracer")
+		}
+		defer func() {
+			if err := tp.Shutdown(ctx); err != nil {
+				log.Error().Err(err).Msg("Failed to shutdown tracer")
+			}
+		}()
+
 		startA2AServer(ctx, 8002, TimeAgent(ctx), "time agent")
 	},
 }

@@ -16,6 +16,8 @@ sudo mv beyla /usr/local/bin/
 
 ![traces](./docs/traces.webp)
 
+![traces-llm](./docs/traces-llm.webp)
+
 ## Usage
 
 ```bash
