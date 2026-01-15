@@ -22,7 +22,7 @@ sudo mv beyla /usr/local/bin/
 
 ```bash
 make start-lgtm
-make start-bela
+make start-beyla
 
 make start-agent-a
 make start-agent-b
@@ -32,7 +32,6 @@ make start-agent-root
 ## Architecture
 
 ```mermaid
-
 graph LR
     RootAgent --> AgentA
     RootAgent --> AgentB

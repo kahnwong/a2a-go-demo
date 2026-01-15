@@ -1,4 +1,4 @@
-package cmd
+package agents
 
 import (
 	"context"
