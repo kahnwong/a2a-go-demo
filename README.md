@@ -2,8 +2,6 @@
 
 Ref: <https://google.github.io/adk-docs/get-started/quickstart/>
 
-Python implementation: <https://github.com/kahnwong/a2a-demo>
-
 ## Extras
 
 Go implementation includes tracing.
