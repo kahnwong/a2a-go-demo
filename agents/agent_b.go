@@ -43,7 +43,7 @@ func localAgentBMCPTransport(ctx context.Context) mcp.Transport {
 }
 
 func TimeAgent(ctx context.Context) agent.Agent {
-	model, err := gemini.NewModel(ctx, "gemini-2.5-flash", &genai.ClientConfig{
+	model, err := gemini.NewModel(ctx, "gemini-3-flash-preview", &genai.ClientConfig{
 		APIKey: os.Getenv("GOOGLE_API_KEY"),
 	})
 	if err != nil {
