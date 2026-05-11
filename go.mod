@@ -1,6 +1,6 @@
 module github.com/kahnwong/a2a-demo
 
-go 1.25.4
+go 1.26.3
 
 require (
 	github.com/modelcontextprotocol/go-sdk v1.5.0
