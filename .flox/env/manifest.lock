@@ -1,0 +1,23 @@
+{
+  "lockfile-version": 1,
+  "manifest": {
+    "schema-version": "1.15.0",
+    "hook": {
+      "on-activate": "sleep 2 && open http://localhost:8080\n#   # -> Set variables, create files and directories\n#   # -> Perform initialization steps, e.g. create a python venv\n#   # -> Useful environment variables:\n#   #      - FLOX_ENV_PROJECT=/home/user/example\n#   #      - FLOX_ENV=/home/user/example/.flox/run\n#   #      - FLOX_ENV_CACHE=/home/user/example/.flox/cache\n"
+    },
+    "profile": {},
+    "options": {},
+    "services": {
+      "agent-a": {
+        "command": "go run main.go agent-a"
+      },
+      "agent-b": {
+        "command": "go run main.go agent-b"
+      },
+      "agent-root": {
+        "command": "go run main.go root-agent web api webui"
+      }
+    }
+  },
+  "packages": []
+}
